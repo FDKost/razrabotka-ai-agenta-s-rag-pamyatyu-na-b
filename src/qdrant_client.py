@@ -1,67 +1,56 @@
-import uuid
-from typing import List, Dict
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
-from .config import get_config
+from .config import QDRANT_URL, QDRANT_API_KEY, QDRANT_COLLECTION_NAME
 from .embeddings import get_embedding_model
+import uuid
 
-class QdrantClientWrapper:
-    def __init__(self):
-        cfg = get_config()
-        self.client = QdrantClient(url=cfg["qdrant_url"], api_key=cfg["qdrant_api_key"])
-        self.collection_name = cfg["qdrant_collection_name"]
-        self.embedding_model = get_embedding_model()
+client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 
-        # Determine vector size using a dummy embedding
-        dummy_embedding = self.embedding_model.embed_query("test")
-        vector_size = len(dummy_embedding)
+def _get_vector_size() -> int:
+    try:
+        return get_embedding_model().embedding_size
+    except Exception:
+        return 768
 
-        # Ensure collection exists
-        if not self.client.collection_exists(self.collection_name):
-            self.client.create_collection(
-                collection_name=self.collection_name,
-                vectors_config=models.VectorParams(
-                    size=vector_size,
-                    distance=models.Distance.COSINE,
-                ),
-            )
-
-    def add_documents(self, documents: List[Dict]):
-        """
-        documents: list of dicts with keys:
-            - content: str
-            - metadata: dict
-        """
-        contents = [doc["content"] for doc in documents]
-        embeddings = self.embedding_model.embed_documents(contents)
-
-        points = []
-        for idx, (doc, embedding) in enumerate(zip(documents, embeddings)):
-            point_id = str(uuid.uuid4())
-            payload = doc.get("metadata", {})
-            payload["content"] = doc["content"]
-            points.append(
-                models.PointStruct(
-                    id=point_id,
-                    vector=embedding,
-                    payload=payload,
-                )
-            )
-        self.client.upsert(
-            collection_name=self.collection_name,
-            points=points,
+def create_collection(name: str = QDRANT_COLLECTION_NAME):
+    try:
+        client.create_collection(
+            collection_name=name,
+            vectors_config=models.VectorParams(
+                size=_get_vector_size(),
+                distance=models.Distance.COSINE,
+            ),
         )
+    except Exception:
+        # Collection may already exist; ignore
+        pass
 
-    def search(self, query: str, limit: int = 5):
-        embedding = self.embedding_model.embed_query(query)
-        search_result = self.client.search(
-            collection_name=self.collection_name,
-            query_vector=embedding,
-            limit=limit,
+def upsert(name: str, ids: list, vectors: list, payloads: list):
+    points = []
+    for id_, vector, payload in zip(ids, vectors, payloads):
+        points.append(
+            models.PointStruct(
+                id=id_,
+                vector=vector,
+                payload=payload,
+            )
         )
-        results = []
-        for hit in search_result:
-            payload = hit.payload
-            content = payload.get("content", "")
-            results.append({"content": content, "metadata": payload})
-        return results
+    client.upsert(collection_name=name, points=points)
+
+def search(name: str, query_vector: list, limit: int = 5):
+    results = client.search(
+        collection_name=name,
+        query_vector=query_vector,
+        limit=limit,
+    )
+    return results
+
+def delete(name: str, ids: list):
+    client.delete(
+        collection_name=name,
+        points_selector=models.PointSelector(
+            points_selector=models.PointIdsSelector(
+                points=ids
+            )
+        ),
+    )

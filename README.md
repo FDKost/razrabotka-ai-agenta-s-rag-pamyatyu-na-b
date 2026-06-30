@@ -102,8 +102,8 @@ python src/cli.py ingest path/to/docs
 │   ├── config.py
 │   ├── embeddings.py
 │   ├── chunker.py
-│   ├── ingestion.py
 │   ├── qdrant_client.py
+│   ├── ingestion.py
 │   ├── tools.py
 │   ├── agent.py
 │   ├── cli.py
