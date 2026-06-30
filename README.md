@@ -1,47 +1,63 @@
-# RAG Agent
+# RAG Agent Project
 
-A lightweight Retrieval-Augmented Generation (RAG) agent built with LangChain, Qdrant, and Ollama.  
+This repository contains a simple Retrieval-Augmented Generation (RAG) agent built with LangChain, Ollama, and Qdrant.  
 It allows you to:
 
-- **Add** text documents to a vector store.
-- **Search** the knowledge base for relevant passages.
-- **Interact** with the agent via a simple CLI or programmatically.
+* **Add** text documents to a vector store.
+* **Search** the knowledge base via semantic search.
+* Interact with the agent through a command‑line interface or programmatically.
 
 ## Setup
 
 ```bash
+# Clone the repo
+git clone https://github.com/your-username/rag-agent.git
+cd rag-agent
+
+# Create a virtual environment
+python -m venv .venv
+source .venv/bin/activate   # On Windows use `.venv\Scripts\activate`
+
 # Install dependencies
 pip install -r requirements.txt
-
-# Create a `.env` file (or set environment variables)
-# Example:
-# QDRANT_URL=http://localhost:6333
-# QDRANT_API_KEY=
-# QDRANT_COLLECTION=rag_collection
 ```
 
+## Configuration
+
+Create a `.env` file in the project root (a template is provided) and set:
+
+```dotenv
+QDRANT_URL=http://localhost:6333
+QDRANT_API_KEY=  # leave empty if no key
+QDRANT_COLLECTION=rag_collection
+```
+
+Ensure a Qdrant instance is running at the specified URL.
+
 ## Usage
+
+### Load documents
+
+```bash
+python init_loader.py --path /path/to/text/files
+```
 
 ### CLI
 
 ```bash
-# Add a file
-python -m cli add path/to/file.txt
-
-# Search
-python -m cli search "your query here"
+python cli.py add /path/to/file.txt
+python cli.py search "your query"
 ```
 
-### Agent
+### Interactive Agent
 
-```python
-from agent import create_agent_executor
-
-agent = create_agent_executor()
-response = agent.run("What is the capital of France?")
-print(response)
+```bash
+python main.py
 ```
+
+Type your questions and the agent will decide whether to search or add content.  
+Type `/quit` to exit.
 
 ## License
 
-MIT
+MIT License

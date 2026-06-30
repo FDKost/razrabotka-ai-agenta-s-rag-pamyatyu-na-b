@@ -23,7 +23,7 @@ TOOLS: List[Tool] = [
 ]
 
 
-def create_agent_executor() -> AgentExecutor:
+def create_agent_executor():
     """
     Create and return a LangChain agent that can use the defined tools.
     """
