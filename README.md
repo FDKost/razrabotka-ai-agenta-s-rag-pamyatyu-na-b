@@ -106,7 +106,8 @@ python src/cli.py ingest path/to/docs
 │   ├── qdrant_client.py
 │   ├── tools.py
 │   ├── agent.py
-│   └── cli.py
+│   ├── cli.py
+│   └── chromadb_client.py
 ├── scripts
 │   └── init_db.py
 ├── .env.example

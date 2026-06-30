@@ -1,81 +1,67 @@
-from qdrant_client import QdrantClient, models
-from typing import List, Dict, Any
-import os
-from dotenv import load_dotenv
+import uuid
+from typing import List, Dict
+from qdrant_client import QdrantClient
+from qdrant_client.http import models
+from .config import get_config
+from .embeddings import get_embedding_model
 
-load_dotenv()
-
-QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
-QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
-QDRANT_COLLECTION_NAME = os.getenv("QDRANT_COLLECTION_NAME", "knowledge_base")
-
-class QdrantVectorStore:
+class QdrantClientWrapper:
     def __init__(self):
-        self.client = QdrantClient(
-            url=QDRANT_URL,
-            api_key=QDRANT_API_KEY or None,
-        )
-        self.collection_name = QDRANT_COLLECTION_NAME
+        cfg = get_config()
+        self.client = QdrantClient(url=cfg["qdrant_url"], api_key=cfg["qdrant_api_key"])
+        self.collection_name = cfg["qdrant_collection_name"]
+        self.embedding_model = get_embedding_model()
+
+        # Determine vector size using a dummy embedding
+        dummy_embedding = self.embedding_model.embed_query("test")
+        vector_size = len(dummy_embedding)
+
         # Ensure collection exists
-        if self.collection_name not in self.client.get_collections().collections:
+        if not self.client.collection_exists(self.collection_name):
             self.client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config=models.VectorParams(
-                    size=384,  # default size for Ollama embeddings; adjust if needed
+                    size=vector_size,
                     distance=models.Distance.COSINE,
                 ),
             )
 
-    def add_documents(self, documents: List[Dict[str, Any]]):
+    def add_documents(self, documents: List[Dict]):
         """
         documents: list of dicts with keys:
-            id: str
-            embedding: List[float]
-            metadata: dict
+            - content: str
+            - metadata: dict
         """
-        vectors = [
-            models.PointStruct(
-                id=doc["id"],
-                vector=doc["embedding"],
-                payload=doc["metadata"],
+        contents = [doc["content"] for doc in documents]
+        embeddings = self.embedding_model.embed_documents(contents)
+
+        points = []
+        for idx, (doc, embedding) in enumerate(zip(documents, embeddings)):
+            point_id = str(uuid.uuid4())
+            payload = doc.get("metadata", {})
+            payload["content"] = doc["content"]
+            points.append(
+                models.PointStruct(
+                    id=point_id,
+                    vector=embedding,
+                    payload=payload,
+                )
             )
-            for doc in documents
-        ]
         self.client.upsert(
             collection_name=self.collection_name,
-            points=vectors,
+            points=points,
         )
 
-    def search(self, query_vector: List[float], k: int = 5):
-        results = self.client.search(
+    def search(self, query: str, limit: int = 5):
+        embedding = self.embedding_model.embed_query(query)
+        search_result = self.client.search(
             collection_name=self.collection_name,
-            query_vector=query_vector,
-            limit=k,
-            with_payload=True,
-            with_vector=False,
+            query_vector=embedding,
+            limit=limit,
         )
-        hits = []
-        for hit in results:
-            hits.append(
-                {
-                    "id": hit.id,
-                    "score": hit.score,
-                    "metadata": hit.payload,
-                    "embedding": hit.vector,
-                }
-            )
-        return hits
-
-    def delete(self, ids: List[str]):
-        self.client.delete(
-            collection_name=self.collection_name,
-            points_selector=models.PointSelector(
-                points=ids
-            ),
-        )
-
-    def get_collection(self):
-        return self.client.get_collection(self.collection_name)
-
-    def close(self):
-        self.client.close()
+        results = []
+        for hit in search_result:
+            payload = hit.payload
+            content = payload.get("content", "")
+            results.append({"content": content, "metadata": payload})
+        return results
