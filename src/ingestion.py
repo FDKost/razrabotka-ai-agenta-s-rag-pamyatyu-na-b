@@ -3,7 +3,7 @@ from pathlib import Path
 from tqdm import tqdm
 from .chunker import chunk_text
 from .embeddings import get_embedding
-from .qdrant_client import upsert_vectors, create_collection
+from .chromadb_client import upsert_vectors, create_collection
 
 def read_file(file_path: Path):
     if file_path.suffix.lower() in [".txt"]:

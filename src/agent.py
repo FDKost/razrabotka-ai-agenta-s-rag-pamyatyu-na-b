@@ -17,7 +17,7 @@ memory = ConversationBufferMemory(memory_key="chat_history", return_messages=Tru
 agent = create_openai_tools_agent(
     llm=llm,
     tools=tools,
-    system_message="You are an AI assistant with RAG memory. Use the provided tools to answer queries.",
+    system_message="You are an AI assistant with RAG memory. Use the provided tools to search the knowledge base and add documents.",
 )
 
 agent_executor = AgentExecutor(agent=agent, tools=tools, memory=memory, verbose=True)

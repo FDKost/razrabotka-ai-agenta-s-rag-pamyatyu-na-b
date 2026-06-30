@@ -1,31 +1,33 @@
 from langchain.tools import tool
-from .qdrant_client import query_vectors, upsert_vectors
-from .chunker import chunk_text
+from .chromadb_client import similarity_search
 from .embeddings import get_embedding
-from .config import COLLECTION_NAME
+from .chunker import chunk_text
+from .ingestion import ingest_directory
+import os
+from pathlib import Path
 
-@tool("search_knowledge_base")
+@tool
 def search_knowledge_base(query: str, max_results: int = 5) -> str:
     """
     Search the knowledge base for relevant chunks.
+    Returns a formatted string of results.
     """
-    embedding = get_embedding(query)
-    results = query_vectors(embedding, k=max_results)
-    if not results:
-        return "No relevant documents found."
-    contents = []
-    for res in results:
-        payload = res.payload
-        content = payload.get("content", "")
-        source = payload.get("source", "")
-        chunk_id = payload.get("chunk_id", "")
-        contents.append(f"Source: {source} (chunk {chunk_id})\n{content}")
-    return "\n\n".join(contents)
+    query_vector = get_embedding(query)
+    hits = similarity_search(query_vector, max_results)
+    if not hits:
+        return "No relevant results found."
+    output_lines = []
+    for hit in hits:
+        meta = hit["metadata"]
+        output_lines.append(
+            f"Score: {hit['score']:.4f} | Source: {meta.get('source', 'unknown')} | Chunk ID: {meta.get('chunk_id')}\nContent: {meta.get('content')[:200]}..."
+        )
+    return "\n\n".join(output_lines)
 
-@tool("add_to_knowledge_base")
+@tool
 def add_to_knowledge_base(content: str, title: str) -> str:
     """
-    Add a new document to the knowledge base.
+    Add a single document to the knowledge base.
     """
     metadata = {"source": title}
     chunks = chunk_text(content, metadata)
@@ -44,5 +46,6 @@ def add_to_knowledge_base(content: str, title: str) -> str:
                 },
             }
         )
+    from .chromadb_client import upsert_vectors
     upsert_vectors(vectors)
     return f"Added {len(vectors)} chunks to the knowledge base."
