@@ -1,6 +1,11 @@
 import os
 from pathlib import Path
-from .tools import add_to_knowledge_base
+import logging
+from .qdrant_vector_store import QdrantVectorStore
+
+logging.basicConfig(level=logging.INFO)
+
+vector_store = QdrantVectorStore()
 
 def ingest_directory(directory: Path, overwrite: bool = False):
     """
@@ -12,7 +17,6 @@ def ingest_directory(directory: Path, overwrite: bool = False):
                 file_path = Path(root) / file_name
                 try:
                     if file_name.lower().endswith(".pdf"):
-                        # Simple PDF text extraction
                         from PyPDF2 import PdfReader
                         reader = PdfReader(file_path)
                         content = ""
@@ -21,6 +25,7 @@ def ingest_directory(directory: Path, overwrite: bool = False):
                     else:
                         content = file_path.read_text(encoding="utf-8")
                     title = file_path.stem
-                    add_to_knowledge_base(content=content, title=title)
+                    vector_store.add_documents_with_embeddings(content, title, source=str(file_path))
+                    logging.info(f"Ingested {file_path}")
                 except Exception as e:
-                    print(f"Failed to ingest {file_path}: {e}")
+                    logging.error(f"Failed to ingest {file_path}: {e}")

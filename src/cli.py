@@ -3,7 +3,9 @@ from pathlib import Path
 from .agent import agent_executor
 from .ingestion import ingest_directory
 from .tools import search_knowledge_base, add_to_knowledge_base
-import sys
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 @click.group()
 def cli():

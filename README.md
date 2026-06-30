@@ -1,5 +1,9 @@
-# Add @tool decorators to RAG agent tools
+# Разработка AI-агента с локальной RAG-памятью на Qdrant и Ollama
 
 ## Requirements
-- [high] Decorate search_knowledge_base: Import the @tool decorator from langchain.tools and apply it to the search_knowledge_base function, ensuring it returns a dictionary with the search results and optional metadata.
-- [high] Decorate add_to_knowledge_base: Import the @tool decorator from langchain.tools and apply it to the add_to_knowledge_base function, ensuring it returns a confirmation message or status after adding a document to the vector store.
+- [high] Инструменты @tool: Создать два инструмента через декоратор @tool: search_knowledge_base(query, max_results) – семантический поиск в базе знаний; add_to_knowledge_base(content, title) – добавление документа в базу. Инструменты должны использовать QdrantVectorStore и возвращать понятные ответы.
+- [high] Модуль QdrantVectorStore: Разработать класс, инициализирующий клиент Qdrant и коллекцию. Реализовать методы add_documents_with_embeddings(content, title) и search(query, max_results) с использованием Ollama для генерации эмбеддингов и метрики релевантности (cosine). Обеспечить сохранение метаданных (title, source).
+- [normal] Система чанкинга: Использовать RecursiveCharacterTextSplitter для разбиения больших документов на чанки перед добавлением в базу. Чанки должны хранить метаданные о исходном документе и позиции. Проверить, что размер чанков соответствует настройкам splitter’а.
+- [high] Агент с RAG‑интеграцией: Создать функцию create_agent, которая конфигурирует LangChain Agent с системным промптом, указывающим использовать инструменты поиска и добавления. Агент должен корректно обрабатывать запросы, обращаться к инструментам и формировать ответы.
+- [normal] Скрипт инициализации: Написать скрипт, который загружает все файлы из заданной директории, разбивает их на чанки, генерирует эмбеддинги и сохраняет в Qdrant. Скрипт должен быть idempotent и логировать процесс.
+- [normal] Интерактивный клиент: Разработать CLI‑интерфейс с командами /add, /search, /quit, позволяющий пользователю добавлять документы, выполнять поиск и завершать работу. Клиент должен использовать созданные инструменты и выводить результаты в читаемом формате.
