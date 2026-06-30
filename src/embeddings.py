@@ -1,8 +1,14 @@
-from langchain_ollama.embeddings import OllamaEmbeddings
-from src.config import OLLAMA_HOST, OLLAMA_MODEL
+from langchain_ollama import OllamaEmbeddings
+from .config import OLLAMA_HOST, OLLAMA_MODEL
 
-def get_ollama_embeddings():
+# Initialize the Ollama embeddings model
+embeddings = OllamaEmbeddings(
+    base_url=OLLAMA_HOST,
+    model=OLLAMA_MODEL,
+)
+
+def embed(text: str):
     """
-    Returns an instance of OllamaEmbeddings configured with the host and model.
+    Return the embedding vector for a given text string.
     """
-    return OllamaEmbeddings(base_url=OLLAMA_HOST, model=OLLAMA_MODEL)
+    return embeddings.embed_query(text)

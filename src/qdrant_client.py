@@ -1,53 +1,55 @@
-from qdrant_client import QdrantClient as Qdrant
+from qdrant_client import QdrantClient
 from qdrant_client.http import models
-from src.config import QDRANT_URL, QDRANT_API_KEY, QDRANT_COLLECTION_NAME
+from .config import QDRANT_URL, QDRANT_API_KEY, QDRANT_COLLECTION_NAME
+from .embeddings import embed
 
-class QdrantVectorStore:
+class QdrantWrapper:
     """
-    Wrapper around QdrantClient to handle collection creation,
-    document insertion, and similarity search.
+    Simple wrapper around QdrantClient to handle collection creation,
+    upsert, and search operations.
     """
-
     def __init__(self):
-        self.client = Qdrant(url=QDRANT_URL, api_key=QDRANT_API_KEY)
-        self.collection_name = QDRANT_COLLECTION_NAME
-        self._ensure_collection()
-
-    def _ensure_collection(self):
-        collections = self.client.get_collections()
-        existing = [c.name for c in collections.collections]
-        if self.collection_name not in existing:
-            self.client.create_collection(
-                collection_name=self.collection_name,
+        self.client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
+        self.collection = QDRANT_COLLECTION_NAME
+        # Ensure collection exists
+        if not self.client.collection_exists(self.collection):
+            # Determine vector size from a dummy embedding
+            dummy_vector = embed("test")
+            vector_size = len(dummy_vector)
+            self.client.recreate_collection(
+                collection_name=self.collection,
                 vectors_config=models.VectorParams(
-                    size=768,  # default size for Ollama embeddings
-                    distance=models.Distance.COSINE
+                    size=vector_size,
+                    distance=models.Distance.COSINE,
                 ),
             )
 
-    def add(self, embeddings, documents, ids=None, metadata=None):
+    def upsert(self, vectors, payloads):
         """
-        Adds documents to the collection.
+        Upsert a batch of vectors with associated payloads.
         """
-        points = []
-        for i, (emb, doc, meta) in enumerate(zip(embeddings, documents, metadata)):
-            point_id = ids[i] if ids else i
-            points.append(
-                models.PointStruct(
-                    id=point_id,
-                    vector=emb,
-                    payload=meta
-                )
-            )
-        self.client.upsert(collection_name=self.collection_name, points=points)
+        batch = models.Batch(
+            ids=[i for i in range(len(vectors))],
+            vectors=vectors,
+            payload=payloads,
+        )
+        self.client.upsert(
+            collection_name=self.collection,
+            points=batch,
+        )
 
-    def search(self, query_embedding, limit=5):
+    def search(self, query_vector, limit=5):
         """
-        Performs a similarity search.
+        Search the collection for the most similar vectors.
         """
         results = self.client.search(
-            collection_name=self.collection_name,
-            query_vector=query_embedding,
+            collection_name=self.collection,
+            query_vector=query_vector,
             limit=limit,
+            with_payload=True,
+            with_vectors=False,
         )
         return results
+
+# Singleton instance
+qdrant = QdrantWrapper()

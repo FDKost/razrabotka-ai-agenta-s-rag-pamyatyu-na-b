@@ -1,33 +1,48 @@
-from .qdrant_client import QdrantVectorStore
-from .embeddings import get_ollama_embeddings
+from langchain.tools import tool
+from .qdrant_client import qdrant
+from .embeddings import embed
 from .chunker import chunk_text
+import json
 
-def search_knowledge_base(query: str, max_results: int = 5):
+@tool(
+    name="search_knowledge_base",
+    description="Search the vector store for relevant documents based on a query."
+)
+def search_knowledge_base(query: str, max_results: int = 5) -> str:
     """
-    Searches the knowledge base for the given query and returns formatted results.
-    """
-    store = QdrantVectorStore()
-    embeddings_model = get_ollama_embeddings()
-    query_emb = embeddings_model.embed_query(query)
-    results = store.search(query_emb, limit=max_results)
+    Search the knowledge base for documents relevant to the query.
 
-    output = ""
-    for r in results:
-        payload = r.payload
-        output += f"Source: {payload.get('source', 'unknown')}\n"
-        output += f"Content: {payload.get('content', '')}\n\n"
-    return output or "No results found."
+    Returns a JSON string containing the results and metadata.
+    """
+    query_vector = embed(query)
+    results = qdrant.search(query_vector, limit=max_results)
+    # Convert results to a serializable form
+    formatted = []
+    for res in results:
+        formatted.append(
+            {
+                "id": res.id,
+                "score": res.score,
+                "payload": res.payload,
+            }
+        )
+    return json.dumps({"results": formatted}, indent=2)
 
-def add_to_knowledge_base(content: str, title: str):
+@tool(
+    name="add_to_knowledge_base",
+    description="Add a new document to the vector store by ingesting its content."
+)
+def add_to_knowledge_base(content: str, title: str) -> str:
     """
-    Adds a document (or content string) to the knowledge base.
+    Ingest a document into the knowledge base.
+
+    The document is split into chunks, each chunk is embedded, and the
+    resulting vectors are upserted into Qdrant.
     """
-    store = QdrantVectorStore()
-    embeddings_model = get_ollama_embeddings()
-    chunks = chunk_text(content, {"source": title})
-    contents = [c["content"] for c in chunks]
-    metas = [c["metadata"] for c in chunks]
-    embeddings = embeddings_model.embed_documents(contents)
-    ids = [f"{title}_{c['metadata']['chunk_id']}" for c in chunks]
-    store.add(embeddings, contents, ids=ids, metadata=metas)
-    return f"Added {len(chunks)} chunks to the knowledge base."
+    # Prepare metadata
+    metadata = {"title": title}
+    chunks = chunk_text(content, metadata)
+    vectors = [embed(chunk["content"]) for chunk in chunks]
+    payloads = [chunk["metadata"] for chunk in chunks]
+    qdrant.upsert(vectors, payloads)
+    return f"Document '{title}' ingested with {len(chunks)} chunks."
