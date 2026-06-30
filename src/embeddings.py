@@ -1,11 +1,8 @@
-from langchain_community.embeddings import OllamaEmbeddings
-from .config import OLLAMA_HOST, OLLAMA_MODEL
+from langchain_ollama.embeddings import OllamaEmbeddings
+from src.config import OLLAMA_HOST, OLLAMA_MODEL
 
-def get_embedding_model():
+def get_ollama_embeddings():
     """
-    Returns an OllamaEmbeddings instance configured with the host and model.
+    Returns an instance of OllamaEmbeddings configured with the host and model.
     """
-    return OllamaEmbeddings(
-        base_url=OLLAMA_HOST,
-        model=OLLAMA_MODEL,
-    )
+    return OllamaEmbeddings(base_url=OLLAMA_HOST, model=OLLAMA_MODEL)

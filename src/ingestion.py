@@ -1,70 +1,40 @@
 import os
 from pathlib import Path
-from typing import List
 from .chunker import chunk_text
-from .embeddings import get_embedding_model
-from .qdrant_client import QdrantClientWrapper
-from .config import QDRANT_COLLECTION_NAME
-import logging
-import PyPDF2
+from .embeddings import get_ollama_embeddings
+from .qdrant_client import QdrantVectorStore
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-def _read_file(file_path: Path) -> str:
+def ingest_directory(directory: Path, overwrite=False):
     """
-    Reads a file and returns its text content.
-    Supports .txt and .pdf files.
+    Ingests all supported files from a directory into the Qdrant vector store.
+    Supported file types: .txt, .md, .pdf
     """
-    if file_path.suffix.lower() == ".txt":
-        return file_path.read_text(encoding="utf-8")
-    elif file_path.suffix.lower() == ".pdf":
-        with open(file_path, "rb") as f:
-            reader = PyPDF2.PdfReader(f)
-            text = ""
-            for page in reader.pages:
-                text += page.extract_text() or ""
-            return text
-    else:
-        raise ValueError(f"Unsupported file type: {file_path.suffix}")
-
-def ingest_directory(directory: Path, overwrite: bool = False):
-    """
-    Ingest all supported files from a directory into Qdrant.
-    """
-    if not directory.is_dir():
-        raise ValueError(f"{directory} is not a directory")
-
-    client = QdrantClientWrapper()
+    store = QdrantVectorStore()
     if overwrite:
-        client.delete_collection()
-        client._ensure_collection()
+        # Delete existing collection and recreate
+        store.client.delete_collection(collection_name=store.collection_name)
+        store._ensure_collection()
 
-    embedding_model = get_embedding_model()
-    files = [p for p in directory.rglob("*") if p.is_file() and p.suffix.lower() in {".txt", ".pdf"}]
-    logger.info(f"Found {len(files)} files to ingest.")
+    embeddings_model = get_ollama_embeddings()
 
-    for file_path in files:
-        try:
-            content = _read_file(file_path)
-        except Exception as e:
-            logger.warning(f"Skipping {file_path}: {e}")
-            continue
+    for file_path in directory.rglob("*"):
+        if file_path.is_file() and file_path.suffix.lower() in {".txt", ".md", ".pdf"}:
+            try:
+                if file_path.suffix.lower() == ".pdf":
+                    from PyPDF2 import PdfReader
+                    reader = PdfReader(file_path)
+                    text = ""
+                    for page in reader.pages:
+                        text += page.extract_text() or ""
+                else:
+                    text = file_path.read_text(encoding="utf-8")
+            except Exception as e:
+                print(f"Failed to read {file_path}: {e}")
+                continue
 
-        metadata = {"title": file_path.stem, "source": str(file_path)}
-        chunks = chunk_text(content, metadata)
-        embeddings = embedding_model.embed_documents([c["content"] for c in chunks])
-
-        vectors = []
-        for idx, (chunk, embed) in enumerate(zip(chunks, embeddings)):
-            vector = {
-                "id": str(uuid.uuid4()),
-                "vector": embed,
-                "payload": {**chunk["metadata"]},
-            }
-            vectors.append(vector)
-
-        client.upsert(vectors)
-        logger.info(f"Ingested {file_path} with {len(chunks)} chunks.")
-
-    logger.info("Ingestion complete.")
+            chunks = chunk_text(text, {"source": str(file_path)})
+            contents = [c["content"] for c in chunks]
+            metas = [c["metadata"] for c in chunks]
+            embeddings = embeddings_model.embed_documents(contents)
+            ids = [f"{file_path.stem}_{c['metadata']['chunk_id']}" for c in chunks]
+            store.add(embeddings, contents, ids=ids, metadata=metas)

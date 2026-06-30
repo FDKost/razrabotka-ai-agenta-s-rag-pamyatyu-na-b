@@ -1,94 +1,53 @@
-import uuid
-from typing import List, Dict, Any, Optional
-from qdrant_client import QdrantClient
+from qdrant_client import QdrantClient as Qdrant
 from qdrant_client.http import models
-from qdrant_client.http.exceptions import QdrantException
-from .config import QDRANT_URL, QDRANT_API_KEY, QDRANT_COLLECTION_NAME
+from src.config import QDRANT_URL, QDRANT_API_KEY, QDRANT_COLLECTION_NAME
 
-class QdrantClientWrapper:
+class QdrantVectorStore:
     """
-    Wrapper around QdrantClient to simplify collection management and vector operations.
+    Wrapper around QdrantClient to handle collection creation,
+    document insertion, and similarity search.
     """
 
-    def __init__(self, url: str = QDRANT_URL, api_key: str = QDRANT_API_KEY, collection_name: str = QDRANT_COLLECTION_NAME):
-        self.client = QdrantClient(url=url, api_key=api_key)
-        self.collection_name = collection_name
+    def __init__(self):
+        self.client = Qdrant(url=QDRANT_URL, api_key=QDRANT_API_KEY)
+        self.collection_name = QDRANT_COLLECTION_NAME
         self._ensure_collection()
 
     def _ensure_collection(self):
-        """
-        Ensure the collection exists; create it if it does not.
-        """
-        try:
-            self.client.recreate_collection(
+        collections = self.client.get_collections()
+        existing = [c.name for c in collections.collections]
+        if self.collection_name not in existing:
+            self.client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config=models.VectorParams(
-                    size=768,  # Ollama embeddings size
-                    distance=models.Distance.COSINE,
+                    size=768,  # default size for Ollama embeddings
+                    distance=models.Distance.COSINE
                 ),
             )
-        except QdrantException as e:
-            # If collection already exists, ignore
-            if "already exists" not in str(e):
-                raise
 
-    def upsert(self, vectors: List[Dict[str, Any]]):
+    def add(self, embeddings, documents, ids=None, metadata=None):
         """
-        Upsert a list of vectors into the collection.
-
-        Each vector dict should contain:
-            - id: str
-            - vector: List[float]
-            - payload: dict
+        Adds documents to the collection.
         """
-        points = [
-            models.PointStruct(
-                id=vec["id"],
-                vector=vec["vector"],
-                payload=vec["payload"],
+        points = []
+        for i, (emb, doc, meta) in enumerate(zip(embeddings, documents, metadata)):
+            point_id = ids[i] if ids else i
+            points.append(
+                models.PointStruct(
+                    id=point_id,
+                    vector=emb,
+                    payload=meta
+                )
             )
-            for vec in vectors
-        ]
-        try:
-            self.client.upsert(
-                collection_name=self.collection_name,
-                points=points,
-            )
-        except QdrantException as e:
-            raise RuntimeError(f"Failed to upsert vectors: {e}")
+        self.client.upsert(collection_name=self.collection_name, points=points)
 
-    def similarity_search(self, query_vector: List[float], limit: int = 5) -> List[Dict[str, Any]]:
+    def search(self, query_embedding, limit=5):
         """
-        Perform a similarity search and return the top results.
-
-        Returns a list of dicts containing:
-            - id
-            - score
-            - payload
+        Performs a similarity search.
         """
-        try:
-            results = self.client.search(
-                collection_name=self.collection_name,
-                query_vector=query_vector,
-                limit=limit,
-                score_threshold=0.0,
-            )
-            return [
-                {
-                    "id": r.id,
-                    "score": r.score,
-                    "payload": r.payload,
-                }
-                for r in results
-            ]
-        except QdrantException as e:
-            raise RuntimeError(f"Failed to perform similarity search: {e}")
-
-    def delete_collection(self):
-        """
-        Delete the entire collection.
-        """
-        try:
-            self.client.delete_collection(self.collection_name)
-        except QdrantException as e:
-            raise RuntimeError(f"Failed to delete collection: {e}")
+        results = self.client.search(
+            collection_name=self.collection_name,
+            query_vector=query_embedding,
+            limit=limit,
+        )
+        return results
