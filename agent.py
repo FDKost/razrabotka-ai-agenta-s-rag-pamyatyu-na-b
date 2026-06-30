@@ -3,6 +3,7 @@ from typing import List
 from langchain.agents import create_agent
 from langchain_ollama import Ollama
 from langchain.schema import AgentAction, AgentFinish
+from langchain.tools import Tool, tool
 
 from tools import search_knowledge_base, add_to_knowledge_base
 from config import SYSTEM_PROMPT

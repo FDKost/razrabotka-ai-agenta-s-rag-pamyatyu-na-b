@@ -1,6 +1,11 @@
-# RAG Agent Project
+# RAG Agent
 
-This repository contains a simple Retrieval-Augmented Generation (RAG) agent built with LangChain, Qdrant, and Ollama. It allows you to add text documents to a vector store and query them using a conversational interface.
+A lightweight Retrieval-Augmented Generation (RAG) agent built with LangChain, Qdrant, and Ollama.  
+It allows you to:
+
+- **Add** text documents to a vector store.
+- **Search** the knowledge base for relevant passages.
+- **Interact** with the agent via a simple CLI or programmatically.
 
 ## Setup
 
@@ -8,23 +13,35 @@ This repository contains a simple Retrieval-Augmented Generation (RAG) agent bui
 # Install dependencies
 pip install -r requirements.txt
 
-# Ensure Qdrant is running locally (default URL: http://localhost:6333)
-# You can use Docker:
-docker run -p 6333:6333 qdrant/qdrant
+# Create a `.env` file (or set environment variables)
+# Example:
+# QDRANT_URL=http://localhost:6333
+# QDRANT_API_KEY=
+# QDRANT_COLLECTION=rag_collection
 ```
 
 ## Usage
 
-- **Add documents**: `python -m cli add path/to/file.txt`
-- **Search**: `python -m cli search "your query"`
-- **Run interactive agent**: `python main.py`
+### CLI
 
-## Configuration
+```bash
+# Add a file
+python -m cli add path/to/file.txt
 
-Environment variables (in `.env`):
+# Search
+python -m cli search "your query here"
+```
 
-- `QDRANT_URL`: URL of the Qdrant instance.
-- `QDRANT_API_KEY`: API key for Qdrant (if required).
-- `QDRANT_COLLECTION`: Name of the collection to use.
+### Agent
 
-Feel free to extend the agent with more tools or integrate it into your own application.
+```python
+from agent import create_agent_executor
+
+agent = create_agent_executor()
+response = agent.run("What is the capital of France?")
+print(response)
+```
+
+## License
+
+MIT
