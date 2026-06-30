@@ -1,7 +1,7 @@
-from agent import create_agent
+from agent import create_agent_executor
 
 def main():
-    agent = create_agent()
+    agent = create_agent_executor()
     print("RAG Agent is ready. Type your messages below. Use '/quit' to exit.")
     while True:
         try:

@@ -1,4 +1,5 @@
 import click
+from pathlib import Path
 
 from tools import add_to_knowledge_base, search_knowledge_base
 

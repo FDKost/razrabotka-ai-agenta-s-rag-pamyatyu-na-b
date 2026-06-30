@@ -1,14 +1,13 @@
 from typing import List, Dict
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from config import CHUNK_SIZE, CHUNK_OVERLAP
 
 
 def chunk_text(
     text: str,
     title: str,
     source: str,
-    chunk_size: int = 1000,
-    chunk_overlap: int = 200,
 ) -> List[Dict[str, str]]:
     """
     Split the input text into chunks while preserving metadata.
@@ -16,8 +15,8 @@ def chunk_text(
     Returns a list of dictionaries with keys: content, title, source.
     """
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=chunk_size,
-        chunk_overlap=chunk_overlap,
+        chunk_size=CHUNK_SIZE,
+        chunk_overlap=CHUNK_OVERLAP,
         separators=["\n\n", "\n", " ", ""],
     )
     chunks = splitter.split_text(text)

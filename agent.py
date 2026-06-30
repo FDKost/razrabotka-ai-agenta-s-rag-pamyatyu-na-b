@@ -1,10 +1,11 @@
 from typing import List
 
-from langchain.agents import initialize_agent, AgentExecutor, Tool
+from langchain.agents import create_agent
 from langchain_ollama import Ollama
 from langchain.schema import AgentAction, AgentFinish
 
 from tools import search_knowledge_base, add_to_knowledge_base
+from config import SYSTEM_PROMPT
 
 # Define the tools
 TOOLS: List[Tool] = [
@@ -21,27 +22,17 @@ TOOLS: List[Tool] = [
 ]
 
 
-def create_agent() -> AgentExecutor:
+def create_agent_executor() -> AgentExecutor:
     """
     Create and return a LangChain agent that can use the defined tools.
     """
     llm = Ollama(model="llama3")
 
-    system_prompt = """
-You are an AI assistant that helps users search and add documents to a knowledge base.
-When a user asks a question, you should decide whether to search the knowledge base or add new content.
-Use the provided tools:
-- search_knowledge_base: to perform semantic search.
-- add_to_knowledge_base: to add new documents.
-
-Respond in a helpful manner. If you need to call a tool, output the tool name and arguments in JSON format as specified by the tool schema.
-"""
-
-    agent = initialize_agent(
-        tools=TOOLS,
+    agent = create_agent(
         llm=llm,
-        agent="openai-functions",
+        tools=TOOLS,
+        agent_type="openai-functions",
         verbose=True,
-        system_message=system_prompt,
+        system_message=SYSTEM_PROMPT,
     )
     return agent
