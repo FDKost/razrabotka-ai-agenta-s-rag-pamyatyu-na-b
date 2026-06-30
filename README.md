@@ -1,10 +1,10 @@
-# RAG Agent with ChromaDB and Ollama
+# RAG Agent with Qdrant and Ollama
 
-This project implements a Retrieval-Augmented Generation (RAG) agent that uses **ChromaDB** as a vector store and **Ollama** for embeddings and LLM inference. The agent can ingest documents, search the knowledge base, and answer queries using the stored context.
+This project implements a Retrieval-Augmented Generation (RAG) agent that uses **Qdrant** as a vector store and **Ollama** for embeddings and LLM inference. The agent can ingest documents, search the knowledge base, and answer queries using the stored context.
 
 ## Features
 
-- **ChromaDB integration** – vector store for embeddings.
+- **Qdrant integration** – vector store for embeddings.
 - **Ollama embeddings & LLM** – lightweight local inference.
 - **Recursive chunking** – splits documents into overlapping chunks.
 - **LangChain tools** – `search_knowledge_base` and `add_to_knowledge_base`.
@@ -16,8 +16,8 @@ This project implements a Retrieval-Augmented Generation (RAG) agent that uses *
 1. **Clone the repo**
 
    ```bash
-   git clone https://github.com/yourusername/rag-agent-chromadb-ollama.git
-   cd rag-agent-chromadb-ollama
+   git clone https://github.com/yourusername/rag-agent-qdrant-ollama.git
+   cd rag-agent-qdrant-ollama
    ```
 
 2. **Create a virtual environment**
@@ -41,9 +41,9 @@ This project implements a Retrieval-Augmented Generation (RAG) agent that uses *
    cp .env.example .env
    ```
 
-   - `CHROMA_HOST`: Host of your ChromaDB instance (default `localhost`).
-   - `CHROMA_PORT`: Port of your ChromaDB instance (default `8000`).
-   - `COLLECTION_NAME`: Name of the ChromaDB collection.
+   - `QDRANT_URL`: URL of your Qdrant instance (default `http://localhost:6333`).
+   - `QDRANT_API_KEY`: API key for Qdrant (leave empty if not required).
+   - `QDRANT_COLLECTION_NAME`: Name of the Qdrant collection.
    - `OLLAMA_HOST`: Ollama host (default `http://localhost:11434`).
    - `OLLAMA_MODEL`: Ollama model name (default `llama3.1`).
 
@@ -51,7 +51,15 @@ This project implements a Retrieval-Augmented Generation (RAG) agent that uses *
 
    Ensure Ollama is running locally or accessible remotely.
 
-6. **Initialize the database**
+6. **Start Qdrant**
+
+   Ensure Qdrant is running locally or accessible remotely. For a local Docker setup:
+
+   ```bash
+   docker run -p 6333:6333 qdrant/qdrant
+   ```
+
+7. **Initialize the database**
 
    ```bash
    python scripts/init_db.py path/to/your/documents
@@ -95,7 +103,7 @@ python src/cli.py ingest path/to/docs
 │   ├── embeddings.py
 │   ├── chunker.py
 │   ├── ingestion.py
-│   ├── chromadb_client.py
+│   ├── qdrant_client.py
 │   ├── tools.py
 │   ├── agent.py
 │   └── cli.py

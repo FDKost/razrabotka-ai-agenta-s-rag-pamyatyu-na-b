@@ -1,51 +1,74 @@
 from langchain.tools import tool
-from .chromadb_client import similarity_search
-from .embeddings import get_embedding
-from .chunker import chunk_text
-from .ingestion import ingest_directory
-import os
-from pathlib import Path
+from typing import List, Dict
+from .qdrant_client import QdrantVectorStore
+from .embeddings import get_embedding_model
+import uuid
 
-@tool
+vector_store = QdrantVectorStore()
+embedding_model = get_embedding_model()
+
+@tool("search_knowledge_base")
 def search_knowledge_base(query: str, max_results: int = 5) -> str:
     """
-    Search the knowledge base for relevant chunks.
-    Returns a formatted string of results.
+    Search the knowledge base for relevant documents.
+
+    Parameters
+    ----------
+    query : str
+        The search query.
+    max_results : int, optional
+        Number of results to return (default 5).
+
+    Returns
+    -------
+    str
+        A formatted string containing the search results.
     """
-    query_vector = get_embedding(query)
-    hits = similarity_search(query_vector, max_results)
+    query_vector = embedding_model.embed_query(query)
+    hits = vector_store.search(query_vector, k=max_results)
     if not hits:
-        return "No relevant results found."
+        return "No relevant documents found."
     output_lines = []
     for hit in hits:
         meta = hit["metadata"]
-        output_lines.append(
-            f"Score: {hit['score']:.4f} | Source: {meta.get('source', 'unknown')} | Chunk ID: {meta.get('chunk_id')}\nContent: {meta.get('content')[:200]}..."
-        )
-    return "\n\n".join(output_lines)
+        content = meta.get("content", "")
+        title = meta.get("title", "Untitled")
+        source = meta.get("source", "Unknown")
+        output_lines.append(f"- {title} ({source}): {content[:200]}...")
+    return "\n".join(output_lines)
 
-@tool
+@tool("add_to_knowledge_base")
 def add_to_knowledge_base(content: str, title: str) -> str:
     """
-    Add a single document to the knowledge base.
+    Add a new document to the knowledge base.
+
+    Parameters
+    ----------
+    content : str
+        The full text content of the document.
+    title : str
+        The title of the document.
+
+    Returns
+    -------
+    str
+        Confirmation message.
     """
-    metadata = {"source": title}
-    chunks = chunk_text(content, metadata)
-    vectors = []
-    for chunk in chunks:
-        vector = get_embedding(chunk["content"])
-        point_id = f"{title}_{chunk['metadata']['chunk_id']}"
-        vectors.append(
+    metadata = {"title": title, "source": "user_input"}
+    chunks = []
+    # Simple chunking: split by paragraphs
+    for idx, paragraph in enumerate(content.split("\n\n")):
+        chunk_text = paragraph.strip()
+        if not chunk_text:
+            continue
+        embedding = embedding_model.embed_query(chunk_text)
+        doc_id = str(uuid.uuid4())
+        chunks.append(
             {
-                "id": point_id,
-                "vector": vector,
-                "payload": {
-                    "content": chunk["content"],
-                    "source": metadata["source"],
-                    "chunk_id": chunk["metadata"]["chunk_id"],
-                },
+                "id": doc_id,
+                "embedding": embedding,
+                "metadata": {"content": chunk_text, "chunk_id": idx, "title": title},
             }
         )
-    from .chromadb_client import upsert_vectors
-    upsert_vectors(vectors)
-    return f"Added {len(vectors)} chunks to the knowledge base."
+    vector_store.add_documents(chunks)
+    return f"Added {len(chunks)} chunks to the knowledge base."
