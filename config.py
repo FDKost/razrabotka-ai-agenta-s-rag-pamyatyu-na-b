@@ -3,9 +3,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
-QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", "")
-QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "rag_collection")
+# ChromaDB configuration
+CHROMA_PERSIST_DIR = os.getenv("CHROMA_PERSIST_DIR", "./chromadb")
+CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "rag_collection")
 
 # Chunking parameters
 CHUNK_SIZE = 500

@@ -4,7 +4,6 @@ from pathlib import Path
 
 from tools import add_to_knowledge_base
 
-
 def load_directory(path: str, overwrite: bool = False):
     """
     Walk through the specified directory, read all .txt files, and load them into the vector store.
@@ -27,7 +26,7 @@ def load_directory(path: str, overwrite: bool = False):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Bulk load text files into Qdrant.")
+    parser = argparse.ArgumentParser(description="Bulk load text files into ChromaDB.")
     parser.add_argument(
         "--path",
         type=str,
@@ -41,14 +40,14 @@ def main():
     )
     args = parser.parse_args()
 
-    from qdrant_store import QdrantVectorStore
+    from chroma_store import ChromaVectorStore
 
     if args.overwrite:
         print("Deleting existing collection...")
-        store = QdrantVectorStore()
+        store = ChromaVectorStore()
         store.delete_collection()
         print("Collection deleted. Recreating...")
-        store = QdrantVectorStore()
+        store = ChromaVectorStore()
 
     load_directory(args.path, overwrite=args.overwrite)
 
