@@ -1,39 +1,32 @@
 from langchain.tools import tool
-from src.qdrant_client import search, upsert_vectors, create_collection
-from src.embeddings import get_embedding
-from src.chunker import chunk_text
-from pathlib import Path
+from .qdrant_client import query_vectors, upsert_vectors
+from .chunker import chunk_text
+from .embeddings import get_embedding
+from .config import COLLECTION_NAME
 
-@tool
+@tool("search_knowledge_base")
 def search_knowledge_base(query: str, max_results: int = 5) -> str:
     """
-    Search the knowledge base for the most relevant chunks to the query.
-    Returns a JSON string with the results.
+    Search the knowledge base for relevant chunks.
     """
-    query_vector = get_embedding(query)
-    results = search(query_vector, limit=max_results)
-    output = []
-    for r in results:
-        payload = r.payload
-        output.append(
-            {
-                "content": payload.get("content"),
-                "source": payload.get("source"),
-                "chunk_id": payload.get("chunk_id"),
-                "score": r.score,
-            }
-        )
-    import json
-    return json.dumps(output, indent=2)
+    embedding = get_embedding(query)
+    results = query_vectors(embedding, k=max_results)
+    if not results:
+        return "No relevant documents found."
+    contents = []
+    for res in results:
+        payload = res.payload
+        content = payload.get("content", "")
+        source = payload.get("source", "")
+        chunk_id = payload.get("chunk_id", "")
+        contents.append(f"Source: {source} (chunk {chunk_id})\n{content}")
+    return "\n\n".join(contents)
 
-@tool
+@tool("add_to_knowledge_base")
 def add_to_knowledge_base(content: str, title: str) -> str:
     """
     Add a new document to the knowledge base.
-    The content is split into chunks and embedded.
-    Returns a confirmation string.
     """
-    create_collection()
     metadata = {"source": title}
     chunks = chunk_text(content, metadata)
     vectors = []
@@ -46,10 +39,10 @@ def add_to_knowledge_base(content: str, title: str) -> str:
                 "vector": vector,
                 "payload": {
                     "content": chunk["content"],
-                    "source": title,
+                    "source": metadata["source"],
                     "chunk_id": chunk["metadata"]["chunk_id"],
                 },
             }
         )
     upsert_vectors(vectors)
-    return f"Added {len(vectors)} chunks from '{title}'."
+    return f"Added {len(vectors)} chunks to the knowledge base."

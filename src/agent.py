@@ -1,8 +1,8 @@
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain.memory import ConversationBufferMemory
 from langchain_community.llms import Ollama
-from src.tools import search_knowledge_base, add_to_knowledge_base
-from config import OLLAMA_HOST, OLLAMA_MODEL
+from .tools import search_knowledge_base, add_to_knowledge_base
+from .config import OLLAMA_HOST, OLLAMA_MODEL
 
 llm = Ollama(
     base_url=OLLAMA_HOST,

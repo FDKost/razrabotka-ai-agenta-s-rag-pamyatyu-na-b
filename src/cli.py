@@ -1,7 +1,7 @@
 import click
 from pathlib import Path
-from src.agent import agent_executor
-from src.ingestion import ingest_directory
+from .agent import agent_executor
+from .ingestion import ingest_directory
 import json
 
 @click.group()

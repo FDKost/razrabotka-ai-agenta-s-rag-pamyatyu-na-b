@@ -1,50 +1,58 @@
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
-from config import (
-    QDRANT_URL,
-    QDRANT_API_KEY,
-    VECTOR_DIM,
-    COLLECTION_NAME,
-)
+from .config import QDRANT_URL, QDRANT_API_KEY, VECTOR_DIM, COLLECTION_NAME
+from typing import List, Dict
 
 client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 
-
 def create_collection():
-    existing = client.get_collections()
-    if COLLECTION_NAME not in [c.name for c in existing.collections]:
-        client.recreate_collection(
+    """
+    Create the Qdrant collection if it does not exist.
+    """
+    try:
+        client.create_collection(
             collection_name=COLLECTION_NAME,
             vectors_config=models.VectorParams(
-                size=VECTOR_DIM, distance=models.Distance.COSINE
+                size=VECTOR_DIM,
+                distance=models.Distance.COSINE,
+            ),
+            hnsw_config=models.HnswConfigDiff(
+                m=16,
+                ef_construct=200,
+                ef_search=200,
             ),
         )
+    except Exception as e:
+        # If collection already exists, ignore the error
+        if "already exists" not in str(e):
+            raise
 
-
-def upsert_vectors(vectors):
+def upsert_vectors(vectors: List[Dict]):
     """
-    vectors: list of dicts with keys:
-        id: str
-        vector: list[float]
-        payload: dict
+    Upsert a list of vectors into the collection.
+    Each vector dict should contain 'id', 'vector', and 'payload'.
     """
-    client.upsert(
-        collection_name=COLLECTION_NAME,
-        points=[
+    points = []
+    for vec in vectors:
+        points.append(
             models.PointStruct(
-                id=v["id"],
-                vector=v["vector"],
-                payload=v["payload"],
+                id=vec["id"],
+                vector=vec["vector"],
+                payload=vec["payload"],
             )
-            for v in vectors
-        ],
-    )
+        )
+    client.upsert(collection_name=COLLECTION_NAME, points=points)
 
-
-def search(query_vector, limit=5):
+def query_vectors(vector: List[float], k: int = 5):
+    """
+    Query the collection for the top-k most similar vectors.
+    Returns a list of search results.
+    """
     results = client.search(
         collection_name=COLLECTION_NAME,
-        query_vector=query_vector,
-        limit=limit,
+        query_vector=vector,
+        limit=k,
+        with_payload=True,
+        with_vector=False,
     )
     return results
