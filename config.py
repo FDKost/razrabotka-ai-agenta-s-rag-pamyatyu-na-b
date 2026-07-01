@@ -3,14 +3,16 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ChromaDB configuration
-CHROMA_PATH = os.getenv("CHROMA_PATH", "./chromadb")
-CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "rag_collection")
+# Qdrant configuration
+QDRANT_HOST = os.getenv("QDRANT_HOST", "localhost")
+QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
+QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "rag_collection")
 
 # Ollama configuration
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 OLLAMA_PORT = int(os.getenv("OLLAMA_PORT", "11434"))
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "nomic-embed-text")
+OLLAMA_EMBED_MODEL = os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text")
+OLLAMA_LLM_MODEL = os.getenv("OLLAMA_LLM_MODEL", "llama3")
 
 # Chunking parameters
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "500"))
@@ -33,11 +35,13 @@ Respond in a helpful manner. If you need to call a tool, output the tool name an
 def get_config():
     """Return a dictionary of all configuration values."""
     return {
-        "CHROMA_PATH": CHROMA_PATH,
-        "CHROMA_COLLECTION": CHROMA_COLLECTION,
+        "QDRANT_HOST": QDRANT_HOST,
+        "QDRANT_PORT": QDRANT_PORT,
+        "QDRANT_COLLECTION": QDRANT_COLLECTION,
         "OLLAMA_HOST": OLLAMA_HOST,
         "OLLAMA_PORT": OLLAMA_PORT,
-        "OLLAMA_MODEL": OLLAMA_MODEL,
+        "OLLAMA_EMBED_MODEL": OLLAMA_EMBED_MODEL,
+        "OLLAMA_LLM_MODEL": OLLAMA_LLM_MODEL,
         "CHUNK_SIZE": CHUNK_SIZE,
         "CHUNK_OVERLAP": CHUNK_OVERLAP,
         "SYSTEM_PROMPT": SYSTEM_PROMPT,

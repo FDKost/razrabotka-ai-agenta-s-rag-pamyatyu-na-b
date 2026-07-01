@@ -4,6 +4,7 @@ from pathlib import Path
 from tools import add_to_knowledge_base
 from init_vector_store import get_vector_store
 
+
 def load_directory(path: str, overwrite: bool = False):
     """
     Walk through the specified directory, read all .txt files, and load them into the vector store.
@@ -35,6 +36,7 @@ def load_directory(path: str, overwrite: bool = False):
     vector_store.persist()
     print("Vector store persisted to disk.")
 
+
 def main():
     import argparse
 
@@ -53,6 +55,7 @@ def main():
     args = parser.parse_args()
 
     load_directory(args.path, overwrite=args.overwrite)
+
 
 if __name__ == "__main__":
     main()
