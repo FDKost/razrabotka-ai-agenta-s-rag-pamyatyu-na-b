@@ -1,21 +1,21 @@
 from agent import create_agent_executor
 
+
 def main():
     agent = create_agent_executor()
-    print("RAG Agent is ready. Type your messages below. Use '/quit' to exit.")
+    print("RAG Agent ready. Type 'exit' or 'quit' to stop.")
     while True:
         try:
-            user_input = input(">> ")
-            if user_input.strip().lower() == "/quit":
-                print("Exiting.")
-                break
-            response = agent.run(user_input)
-            print(response)
-        except KeyboardInterrupt:
-            print("\nInterrupted. Exiting.")
+            user_input = input("\nUser: ")
+        except (KeyboardInterrupt, EOFError):
+            print("\nExiting.")
             break
-        except Exception as e:
-            print(f"Error: {e}")
+        if user_input.lower() in ("exit", "quit"):
+            print("Goodbye!")
+            break
+        response = agent.run(user_input)
+        print(f"Assistant: {response}")
+
 
 if __name__ == "__main__":
     main()

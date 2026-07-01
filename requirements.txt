@@ -1,5 +1,1 @@
-langchain
-langchain_ollama
-chromadb
-python-dotenv
-click
+langchain-ollama
