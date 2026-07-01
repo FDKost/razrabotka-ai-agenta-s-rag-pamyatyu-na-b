@@ -14,7 +14,6 @@ TOOLS: List[Tool] = [
     add_to_knowledge_base,
 ]
 
-
 def create_agent_executor():
     """
     Create and return a LangChain agent that can use the defined tools.

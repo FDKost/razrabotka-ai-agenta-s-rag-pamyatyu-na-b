@@ -11,6 +11,13 @@ def load_directory(path: str, overwrite: bool = False):
     if not os.path.isdir(path):
         raise ValueError(f"Provided path '{path}' is not a directory.")
 
+    vector_store = get_vector_store()
+
+    if overwrite:
+        print("Deleting existing collection...")
+        vector_store.delete_collection()
+        print("Collection deleted. Recreating...")
+
     for root, _, files in os.walk(path):
         for file in files:
             if file.lower().endswith(".txt"):
@@ -24,6 +31,9 @@ def load_directory(path: str, overwrite: bool = False):
                     f"Loaded '{title}' from '{source}'. Chunks added: {result['chunks_added']}"
                 )
 
+    # Persist after loading
+    vector_store.persist()
+    print("Vector store persisted to disk.")
 
 def main():
     import argparse
@@ -42,14 +52,7 @@ def main():
     )
     args = parser.parse_args()
 
-    if args.overwrite:
-        print("Deleting existing collection...")
-        store = get_vector_store()
-        store.delete_collection()
-        print("Collection deleted. Recreating...")
-
     load_directory(args.path, overwrite=args.overwrite)
-
 
 if __name__ == "__main__":
     main()

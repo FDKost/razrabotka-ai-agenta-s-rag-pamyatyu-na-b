@@ -1,6 +1,5 @@
-langchain
-langchain-qdrant
-langchain-ollama
-qdrant-client
+chromadb
+langchain[chromadb]
+langchain_ollama
 python-dotenv
 click

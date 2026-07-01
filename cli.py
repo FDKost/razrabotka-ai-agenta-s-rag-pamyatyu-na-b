@@ -10,7 +10,6 @@ def cli():
     """Simple CLI for interacting with the RAG agent."""
     pass
 
-
 @cli.command()
 @click.argument("file_path", type=click.Path(exists=True, dir_okay=False))
 def add(file_path):
@@ -21,7 +20,6 @@ def add(file_path):
     source = Path(file_path).resolve()
     result = add_to_knowledge_base(content, title, str(source))
     click.echo(f"Added '{title}' from '{source}'. Chunks added: {result['chunks_added']}")
-
 
 @cli.command()
 @click.argument("query", nargs=-1)
@@ -39,13 +37,11 @@ def search(query):
         click.echo(f"Score: {res['score']:.4f}")
         click.echo(f"Content: {res['content'][:500]}{'...' if len(res['content']) > 500 else ''}")
 
-
 @cli.command()
 def quit():
     """Exit the CLI."""
     click.echo("Goodbye!")
     raise SystemExit
-
 
 @cli.command()
 @click.argument("question", nargs=-1)
@@ -55,7 +51,6 @@ def ask(question):
     agent = create_agent_executor()
     result = agent.invoke({"input": question_str})
     click.echo(result["output"])
-
 
 if __name__ == "__main__":
     cli()

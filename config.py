@@ -3,10 +3,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Qdrant configuration
-QDRANT_URL = os.getenv("QDRANT_URL", "localhost")
-QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
-QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", None)
+# ChromaDB configuration
+CHROMA_PATH = os.getenv("CHROMA_PATH", "./chromadb")
+CHROMA_COLLECTION = os.getenv("CHROMA_COLLECTION", "rag_collection")
 
 # Ollama configuration
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
@@ -34,9 +33,8 @@ Respond in a helpful manner. If you need to call a tool, output the tool name an
 def get_config():
     """Return a dictionary of all configuration values."""
     return {
-        "QDRANT_URL": QDRANT_URL,
-        "QDRANT_PORT": QDRANT_PORT,
-        "QDRANT_API_KEY": QDRANT_API_KEY,
+        "CHROMA_PATH": CHROMA_PATH,
+        "CHROMA_COLLECTION": CHROMA_COLLECTION,
         "OLLAMA_HOST": OLLAMA_HOST,
         "OLLAMA_PORT": OLLAMA_PORT,
         "OLLAMA_MODEL": OLLAMA_MODEL,

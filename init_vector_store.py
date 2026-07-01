@@ -1,63 +1,48 @@
 import os
 from typing import List, Dict, Any
 
-from qdrant_client import QdrantClient
-from langchain_qdrant import QdrantVectorStore
-from langchain_ollama import OllamaEmbeddings
+from langchain.vectorstores import Chroma
+from langchain.embeddings import OllamaEmbeddings
+from langchain.docstore.document import Document
 
-from config import (
-    QDRANT_URL,
-    QDRANT_PORT,
-    QDRANT_API_KEY,
-    OLLAMA_MODEL,
-)
+from config import CHROMA_PATH, CHROMA_COLLECTION, OLLAMA_MODEL
 from chunker import chunk_document
 
-class QdrantVectorStoreWrapper:
+class ChromaVectorStoreWrapper:
     """
-    Wrapper around langchain_qdrant.QdrantVectorStore to provide a simple API
+    Wrapper around langchain's Chroma vector store to provide a simple API
     for adding documents and searching.
     """
 
-    def __init__(self, collection_name: str = "rag_collection"):
+    def __init__(self, collection_name: str = CHROMA_COLLECTION, persist_directory: str = CHROMA_PATH):
         self.collection_name = collection_name
-        self.client = QdrantClient(
-            url=QDRANT_URL,
-            port=QDRANT_PORT,
-            api_key=QDRANT_API_KEY,
-        )
+        self.persist_directory = persist_directory
         self.embedding_function = OllamaEmbeddings(model=OLLAMA_MODEL)
-        # Create or get collection
-        self.vector_store = QdrantVectorStore(
-            client=self.client,
+        # Initialize or load existing collection
+        self.vector_store = Chroma(
             collection_name=self.collection_name,
-            embedding=self.embedding_function,
+            persist_directory=self.persist_directory,
+            embedding_function=self.embedding_function,
         )
 
     def add_document(self, text: str, title: str, source: str) -> int:
         """
-        Chunk the document, embed, and upsert into Qdrant.
+        Chunk the document, embed, and upsert into Chroma.
         Returns the number of chunks added.
         """
         chunks = chunk_document(text, title, source)
-        ids = []
         documents = []
-        metadatas = []
         for chunk in chunks:
-            ids.append(chunk["id"])
-            documents.append(chunk["text"])
-            metadatas.append(
-                {
+            doc = Document(
+                page_content=chunk["text"],
+                metadata={
                     "title": chunk["title"],
                     "source": chunk["source"],
                     "content": chunk["text"],
-                }
+                },
             )
-        self.vector_store.add(
-            documents=documents,
-            metadatas=metadatas,
-            ids=ids,
-        )
+            documents.append(doc)
+        self.vector_store.add_documents(documents)
         return len(chunks)
 
     def search(self, query: str, k: int = 5) -> List[Dict[str, Any]]:
@@ -81,13 +66,16 @@ class QdrantVectorStoreWrapper:
 
     def delete_collection(self):
         """Delete the entire collection."""
-        self.client.delete_collection(self.collection_name)
+        self.vector_store.delete_collection()
 
+    def persist(self):
+        """Persist the collection to disk."""
+        self.vector_store.persist()
 
-def get_vector_store() -> QdrantVectorStoreWrapper:
+def get_vector_store() -> ChromaVectorStoreWrapper:
     """
-    Factory function to return a singleton QdrantVectorStoreWrapper instance.
+    Factory function to return a singleton ChromaVectorStoreWrapper instance.
     """
     if not hasattr(get_vector_store, "_instance"):
-        get_vector_store._instance = QdrantVectorStoreWrapper()
+        get_vector_store._instance = ChromaVectorStoreWrapper()
     return get_vector_store._instance
