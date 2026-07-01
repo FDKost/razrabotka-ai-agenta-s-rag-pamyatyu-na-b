@@ -1,8 +1,8 @@
-import argparse
 import os
 from pathlib import Path
 
 from tools import add_to_knowledge_base
+
 
 def load_directory(path: str, overwrite: bool = False):
     """
@@ -26,7 +26,9 @@ def load_directory(path: str, overwrite: bool = False):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Bulk load text files into ChromaDB.")
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Bulk load text files into Qdrant.")
     parser.add_argument(
         "--path",
         type=str,
@@ -40,14 +42,14 @@ def main():
     )
     args = parser.parse_args()
 
-    from chroma_store import ChromaVectorStore
+    from qdrant_store import QdrantVectorStore
 
     if args.overwrite:
         print("Deleting existing collection...")
-        store = ChromaVectorStore()
+        store = QdrantVectorStore()
         store.delete_collection()
         print("Collection deleted. Recreating...")
-        store = ChromaVectorStore()
+        store = QdrantVectorStore()
 
     load_directory(args.path, overwrite=args.overwrite)
 
