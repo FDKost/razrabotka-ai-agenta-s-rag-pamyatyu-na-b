@@ -10,17 +10,10 @@ from config import SYSTEM_PROMPT
 
 # Define the tools
 TOOLS: List[Tool] = [
-    Tool.from_function(
-        func=search_knowledge_base,
-        name="search_knowledge_base",
-        description="Use this tool to perform a semantic search on the knowledge base.",
-    ),
-    Tool.from_function(
-        func=add_to_knowledge_base,
-        name="add_to_knowledge_base",
-        description="Use this tool to add a new document or chunk to the knowledge base.",
-    ),
+    search_knowledge_base,
+    add_to_knowledge_base,
 ]
+
 
 def create_agent_executor():
     """

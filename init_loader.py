@@ -24,6 +24,7 @@ def load_directory(path: str, overwrite: bool = False):
                     f"Loaded '{title}' from '{source}'. Chunks added: {result['chunks_added']}"
                 )
 
+
 def main():
     import argparse
 
@@ -48,6 +49,7 @@ def main():
         print("Collection deleted. Recreating...")
 
     load_directory(args.path, overwrite=args.overwrite)
+
 
 if __name__ == "__main__":
     main()
