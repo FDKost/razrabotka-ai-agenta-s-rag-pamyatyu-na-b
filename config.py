@@ -17,9 +17,6 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "nomic-embed-text")
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "500"))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "100"))
 
-# Vector store selection
-VECTOR_STORE = os.getenv("VECTOR_STORE", "chromadb")  # options: chromadb, qdrant
-
 # System prompt for the agent
 SYSTEM_PROMPT = os.getenv(
     "SYSTEM_PROMPT",
@@ -46,5 +43,4 @@ def get_config():
         "CHUNK_SIZE": CHUNK_SIZE,
         "CHUNK_OVERLAP": CHUNK_OVERLAP,
         "SYSTEM_PROMPT": SYSTEM_PROMPT,
-        "VECTOR_STORE": VECTOR_STORE,
     }

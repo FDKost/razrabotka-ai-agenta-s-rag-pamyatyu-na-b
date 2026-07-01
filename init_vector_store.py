@@ -1,82 +1,80 @@
-import uuid
+import os
 from typing import List, Dict, Any
 
 from qdrant_client import QdrantClient
-from qdrant_client.http import models
+from langchain_qdrant import QdrantVectorStore
 from langchain_ollama import OllamaEmbeddings
 
-from config import QDRANT_URL, QDRANT_PORT, QDRANT_API_KEY, OLLAMA_MODEL
+from config import (
+    QDRANT_URL,
+    QDRANT_PORT,
+    QDRANT_API_KEY,
+    OLLAMA_MODEL,
+)
+from chunker import chunk_document
 
+class QdrantVectorStoreWrapper:
+    """
+    Wrapper around langchain_qdrant.QdrantVectorStore to provide a simple API
+    for adding documents and searching.
+    """
 
-class QdrantVectorStore:
-    def __init__(self):
-        # Initialize Qdrant client
+    def __init__(self, collection_name: str = "rag_collection"):
+        self.collection_name = collection_name
         self.client = QdrantClient(
-            host=QDRANT_URL,
+            url=QDRANT_URL,
             port=QDRANT_PORT,
             api_key=QDRANT_API_KEY,
         )
-        self.collection_name = "rag_collection"
-        self.embedding_model = OllamaEmbeddings(model=OLLAMA_MODEL)
+        self.embedding_function = OllamaEmbeddings(model=OLLAMA_MODEL)
+        # Create or get collection
+        self.vector_store = QdrantVectorStore(
+            client=self.client,
+            collection_name=self.collection_name,
+            embedding=self.embedding_function,
+        )
 
-        # Ensure collection exists
-        if not self.client.collection_exists(self.collection_name):
-            self.client.create_collection(
-                collection_name=self.collection_name,
-                vectors_config=models.VectorParams(
-                    size=self.embedding_model.get_embedding_dimension(),
-                    distance=models.Distance.COSINE,
-                ),
-            )
-
-    def upsert_chunks(self, chunks: List[Dict[str, Any]]) -> List[str]:
+    def add_document(self, text: str, title: str, source: str) -> int:
         """
-        Upsert a list of chunk dictionaries into Qdrant.
-
-        Each chunk dict must contain keys: id, text, title, source.
-        Returns a list of point IDs that were inserted.
+        Chunk the document, embed, and upsert into Qdrant.
+        Returns the number of chunks added.
         """
-        points = []
+        chunks = chunk_document(text, title, source)
+        ids = []
+        documents = []
+        metadatas = []
         for chunk in chunks:
-            vector = self.embedding_model.embed_query(chunk["text"])
-            point = models.PointStruct(
-                id=chunk["id"],
-                vector=vector,
-                payload={
+            ids.append(chunk["id"])
+            documents.append(chunk["text"])
+            metadatas.append(
+                {
                     "title": chunk["title"],
                     "source": chunk["source"],
                     "content": chunk["text"],
-                },
+                }
             )
-            points.append(point)
-        self.client.upsert(
-            collection_name=self.collection_name,
-            points=points,
+        self.vector_store.add(
+            documents=documents,
+            metadatas=metadatas,
+            ids=ids,
         )
-        return [p.id for p in points]
+        return len(chunks)
 
     def search(self, query: str, k: int = 5) -> List[Dict[str, Any]]:
         """
         Perform a semantic search and return a list of matching chunks.
         Each result contains content, title, source, and score.
         """
-        query_vector = self.embedding_model.embed_query(query)
-        results = self.client.search(
-            collection_name=self.collection_name,
-            query_vector=query_vector,
-            limit=k,
-            with_payload=True,
-            with_vector=False,
-        )
+        results = self.vector_store.similarity_search_with_score(query, k)
         hits = []
-        for hit in results:
-            payload = hit.payload
+        for doc, score in results:
+            metadata = doc.metadata or {}
             hits.append(
                 {
-                    "content": payload.get("content", ""),
-                    "title": payload.get("title", ""),
-                    "source": payload.get("source", ""),
-                    "score": hit.score,
+                    "content": doc.page_content,
+                    "title": metadata.get("title", ""),
+                    "source": metadata.get("source", ""),
+                    "score": score,
                 }
             )
         return hits
@@ -86,12 +84,10 @@ class QdrantVectorStore:
         self.client.delete_collection(self.collection_name)
 
 
-# Singleton instance
-_vector_store_instance = None
-
-
-def get_vector_store() -> QdrantVectorStore:
-    global _vector_store_instance
-    if _vector_store_instance is None:
-        _vector_store_instance = QdrantVectorStore()
-    return _vector_store_instance
+def get_vector_store() -> QdrantVectorStoreWrapper:
+    """
+    Factory function to return a singleton QdrantVectorStoreWrapper instance.
+    """
+    if not hasattr(get_vector_store, "_instance"):
+        get_vector_store._instance = QdrantVectorStoreWrapper()
+    return get_vector_store._instance
