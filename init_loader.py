@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 from tools import add_to_knowledge_base
+from init_vector_store import get_vector_store
 
 def load_directory(path: str, overwrite: bool = False):
     """
@@ -26,7 +27,7 @@ def load_directory(path: str, overwrite: bool = False):
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description="Bulk load text files into Qdrant.")
+    parser = argparse.ArgumentParser(description="Bulk load text files into vector store.")
     parser.add_argument(
         "--path",
         type=str,
@@ -40,14 +41,11 @@ def main():
     )
     args = parser.parse_args()
 
-    from qdrant_store import QdrantVectorStore
-
     if args.overwrite:
         print("Deleting existing collection...")
-        store = QdrantVectorStore()
+        store = get_vector_store()
         store.delete_collection()
         print("Collection deleted. Recreating...")
-        store = QdrantVectorStore()
 
     load_directory(args.path, overwrite=args.overwrite)
 

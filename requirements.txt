@@ -1,10 +1,7 @@
 langchain==0.2.0
-openai==1.30.0
-qdrant-client==1.9.0
-pydantic==2.7.0
+langchain-ollama==0.1.0
+langchain-chroma==0.1.0
+chromadb==0.4.20
+qdrant-client==1.8.0
 python-dotenv==1.0.1
-tiktoken==0.7.0
-pandas==2.2.2
-numpy==1.26.4
 click==8.1.7
-requests==2.32.3
