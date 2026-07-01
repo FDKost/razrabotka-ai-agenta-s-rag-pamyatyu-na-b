@@ -8,7 +8,6 @@ from langchain.tools import Tool
 from tools import search_knowledge_base, add_to_knowledge_base
 from config import SYSTEM_PROMPT
 
-
 # Define the tools
 TOOLS: List[Tool] = [
     Tool.from_function(
@@ -22,7 +21,6 @@ TOOLS: List[Tool] = [
         description="Use this tool to add a new document or chunk to the knowledge base.",
     ),
 ]
-
 
 def create_agent_executor():
     """

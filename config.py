@@ -10,6 +10,8 @@ QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", None)
 
 # Ollama configuration
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+OLLAMA_PORT = int(os.getenv("OLLAMA_PORT", "11434"))
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "nomic-embed-text")
 
 # Chunking parameters
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "500"))
@@ -28,3 +30,17 @@ Use the provided tools:
 Respond in a helpful manner. If you need to call a tool, output the tool name and arguments in JSON format as specified by the tool schema.
 """,
 )
+
+def get_config():
+    """Return a dictionary of all configuration values."""
+    return {
+        "QDRANT_URL": QDRANT_URL,
+        "QDRANT_PORT": QDRANT_PORT,
+        "QDRANT_API_KEY": QDRANT_API_KEY,
+        "OLLAMA_HOST": OLLAMA_HOST,
+        "OLLAMA_PORT": OLLAMA_PORT,
+        "OLLAMA_MODEL": OLLAMA_MODEL,
+        "CHUNK_SIZE": CHUNK_SIZE,
+        "CHUNK_OVERLAP": CHUNK_OVERLAP,
+        "SYSTEM_PROMPT": SYSTEM_PROMPT,
+    }

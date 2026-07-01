@@ -7,23 +7,19 @@ from qdrant_client.http.models import PointStruct, VectorParams, Distance
 
 from langchain_ollama import OllamaEmbeddings
 
-from config import QDRANT_URL, QDRANT_PORT, QDRANT_API_KEY
-
+from config import QDRANT_URL, QDRANT_PORT, QDRANT_API_KEY, OLLAMA_MODEL
 
 class QdrantVectorStore:
     def __init__(self):
-        # Initialize Qdrant client with retry logic
-        try:
-            self.client = QdrantClient(
-                url=QDRANT_URL,
-                port=QDRANT_PORT,
-                api_key=QDRANT_API_KEY,
-            )
-        except Exception as e:
-            raise ConnectionError(f"Failed to connect to Qdrant at {QDRANT_URL}:{QDRANT_PORT} - {e}")
+        # Initialize Qdrant client
+        self.client = QdrantClient(
+            url=QDRANT_URL,
+            port=QDRANT_PORT,
+            api_key=QDRANT_API_KEY,
+        )
 
         self.collection_name = "rag_collection"
-        self.embedding_model = OllamaEmbeddings(model="nomic-embed-text")
+        self.embedding_model = OllamaEmbeddings(model=OLLAMA_MODEL)
 
         # Determine embedding dimension
         sample_vector = self.embedding_model.embed_query("test")
@@ -40,34 +36,31 @@ class QdrantVectorStore:
                 ),
             )
 
-    def add_document(
-        self,
-        content: str,
-        title: str,
-        source: str,
-        chunk_id: str = None,
-    ) -> str:
+    def upsert_chunks(self, chunks: List[Dict]) -> List[str]:
         """
-        Add a single chunk to the vector store.
+        Upsert a list of chunk dictionaries into Qdrant.
 
-        Returns the point ID used in Qdrant.
+        Each chunk dict must contain keys: id, text, title, source.
+        Returns a list of point IDs that were inserted.
         """
-        if chunk_id is None:
-            chunk_id = str(uuid.uuid4())
-
-        vector = self.embedding_model.embed_query(content)
-
-        payload = {"title": title, "source": source, "content": content}
-
-        point = PointStruct(id=chunk_id, vector=vector, payload=payload)
+        points = []
+        for chunk in chunks:
+            vector = self.embedding_model.embed_query(chunk["text"])
+            payload = {
+                "title": chunk["title"],
+                "source": chunk["source"],
+                "content": chunk["text"],
+            }
+            point = PointStruct(id=chunk["id"], vector=vector, payload=payload)
+            points.append(point)
 
         self.client.upsert(
             collection_name=self.collection_name,
-            points=[point],
+            points=points,
         )
-        return chunk_id
+        return [p.id for p in points]
 
-    def search(self, query: str, max_results: int = 5) -> List[Dict[str, Any]]:
+    def search(self, query: str, k: int = 5) -> List[Dict[str, Any]]:
         """
         Perform a semantic search and return a list of matching chunks.
         Each result contains content, title, source, and score.
@@ -77,7 +70,7 @@ class QdrantVectorStore:
         search_result = self.client.search(
             collection_name=self.collection_name,
             query_vector=query_vector,
-            limit=max_results,
+            limit=k,
             with_payload=True,
             with_vector=False,
         )
@@ -90,13 +83,11 @@ class QdrantVectorStore:
                     "content": payload.get("content", ""),
                     "title": payload.get("title", ""),
                     "source": payload.get("source", ""),
-                    "score": hit.score,  # Qdrant returns similarity score
+                    "score": hit.score,
                 }
             )
         return hits
 
     def delete_collection(self):
-        """
-        Delete the entire collection. Use with caution.
-        """
+        """Delete the entire collection."""
         self.client.delete_collection(self.collection_name)

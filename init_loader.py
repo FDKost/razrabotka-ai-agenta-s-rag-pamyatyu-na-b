@@ -3,7 +3,6 @@ from pathlib import Path
 
 from tools import add_to_knowledge_base
 
-
 def load_directory(path: str, overwrite: bool = False):
     """
     Walk through the specified directory, read all .txt files, and load them into the vector store.
@@ -23,7 +22,6 @@ def load_directory(path: str, overwrite: bool = False):
                 print(
                     f"Loaded '{title}' from '{source}'. Chunks added: {result['chunks_added']}"
                 )
-
 
 def main():
     import argparse
@@ -52,7 +50,6 @@ def main():
         store = QdrantVectorStore()
 
     load_directory(args.path, overwrite=args.overwrite)
-
 
 if __name__ == "__main__":
     main()
